@@ -25,7 +25,31 @@ func unmarshal(data *bufio.Reader) (interface{}, error) {
 		return integer, nil
 
 	} else if ch == 'd' {
-		fmt.Println(string(ch))
+		dict := make(map[string]interface{})
+		for {
+			ch, err := data.ReadByte()
+			if err != nil {
+				return nil, err
+			}
+			if ch == 'e' {
+				break
+			}
+			data.UnreadByte()
+			keyByte, err := unmarshal(data)
+			if err != nil {
+				return nil, err
+			}
+			key, ok := keyByte.(string)
+			if !ok {
+				return nil, err
+			}
+			item, err := unmarshal(data)
+			if err != nil {
+				return nil, err
+			}
+			dict[key] = item
+		}
+		return dict, nil
 	} else if ch == 'l' {
 		var list []interface{}
 		for {
@@ -62,7 +86,6 @@ func unmarshal(data *bufio.Reader) (interface{}, error) {
 		}
 		return string(buf), nil
 	}
-	return nil, nil
 
 }
 func main() {
@@ -79,11 +102,5 @@ func main() {
 		return
 	}
 	fmt.Println(first)
-	second, err := unmarshal(reader)
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-	fmt.Println(second)
 
 }
