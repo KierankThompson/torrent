@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"io"
 	"os"
 	"strconv"
 )
@@ -13,32 +14,53 @@ func unmarshal(data *bufio.Reader) (interface{}, error) {
 		return nil, err
 	}
 	if ch == 'i' {
-		intBytes, err2 := data.ReadSlice('e')
-		if err2 != nil {
+		intBytes, err := data.ReadSlice('e')
+		if err != nil {
 			return nil, err
 		}
-		integer, err2 := strconv.ParseInt(string(intBytes)[:len(intBytes)-1], 10, 64)
-		if err2 != nil {
-			return nil, err2
+		integer, err := strconv.ParseInt(string(intBytes)[:len(intBytes)-1], 10, 64)
+		if err != nil {
+			return nil, err
 		}
 		return integer, nil
 
 	} else if ch == 'd' {
 		fmt.Println(string(ch))
 	} else if ch == 'l' {
-		fmt.Println(string(ch))
+		var list []interface{}
+		for {
+			ch, err := data.ReadByte()
+			if err != nil {
+				return nil, err
+			}
+			if ch == 'e' {
+				break
+			}
+			data.UnreadByte()
+			item, err := unmarshal(data)
+			if err != nil {
+				return nil, err
+			}
+			list = append(list, item)
+		}
+		return list, nil
+
 	} else {
 		data.UnreadByte()
-		intBytes, err2 := data.ReadSlice(':')
-		if err2 != nil {
+		intBytes, err := data.ReadSlice(':')
+		if err != nil {
 			return nil, err
 		}
-		integer, err2 := strconv.ParseInt(string(intBytes)[:len(intBytes)-1], 10, 64)
-		if err2 != nil {
-			return nil, err2
+		integer, err := strconv.ParseInt(string(intBytes)[:len(intBytes)-1], 10, 64)
+		if err != nil {
+			return nil, err
 		}
-
-		fmt.Println("none!")
+		buf := make([]byte, integer)
+		_, err = io.ReadFull(data, buf)
+		if err != nil {
+			return nil, err
+		}
+		return string(buf), nil
 	}
 	return nil, nil
 
@@ -51,16 +73,17 @@ func main() {
 	}
 	reader := bufio.NewReader(file)
 	//fmt.Println(reader)
-	integer, err := unmarshal(reader)
+	first, err := unmarshal(reader)
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
-	fmt.Println(integer)
-	_, err = unmarshal(reader)
+	fmt.Println(first)
+	second, err := unmarshal(reader)
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
+	fmt.Println(second)
 
 }
